@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/mvc 
+		http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx.xsd
+		">
+	<!-- 开启Spring的注解方式 -->
+	<context:annotation-config></context:annotation-config>
+
+	<!-- 创建注解扫描器 -->
+	<context:component-scan base-package="com.zrgk"></context:component-scan>
+
+	<!-- 启动SpringMVC的注解 -->
+	<mvc:annotation-driven />
+
+	<!-- 配置HttpSolrServer -->
+	<bean class="org.apache.solr.client.solrj.impl.HttpSolrServer"> 
+		<constructor-arg value="http://192.168.248.128:8080/solr/"></constructor-arg>
+	</bean>
+
+
+	<!-- Spring的一些配置 -->
+
+	<!-- 加载数据库连接文件 -->
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:db.properties</value>
+			</list>
+		</property>
+	</bean>
+	<!-- 加载数据源 -->
+	<bean id="db" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${driver}"></property>
+		<property name="url" value="${url}"></property>
+		<property name="username" value="${username}"></property>
+		<property name="password" value="${password}"></property>
+	</bean>
+	<!-- 加载sqlSessionFactory对象 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="db"></property>
+		<property name="typeAliasesPackage" value="com.zrgk.bean"></property>
+	</bean>
+	<!-- Mabatis的扫描器  -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.zrgk.dao"></property>
+	</bean>
+
+	<!-- 加载事务管理器 -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="db"></property>
+	</bean>
+	<!-- 设置事务传播规则 -->
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="*" propagation="REQUIRED" />
+		</tx:attributes>
+	</tx:advice>
+	<!-- AspectJ实现事务管理 -->
+	<aop:config>
+		<aop:pointcut expression="execution(* com.zrgk.service.impl.*.*(..))"
+			id="myPointcut" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="myPointcut" />
+	</aop:config>
+
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="maxUploadSize">
+			<value>100000</value>
+		</property>
+		<property name="defaultEncoding">
+			<value>UTF-8</value>
+		</property>
+	</bean>
+
+</beans>
